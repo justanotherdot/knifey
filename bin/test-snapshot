@@ -1,0 +1,19 @@
+#!/bin/sh -eu
+
+cd knifey-cli
+
+for test in "demo"; do
+  echo "=== $test"
+  if [ ! -f "./snapshots/${test}.snap" ]; then
+    cargo run --bin "$test" -q > "./snapshots/${test}.snap"
+    exit 0
+  fi
+
+  cargo run --bin "$test" -q > "./snapshots/${test}.tmp.snap"
+  diff "./snapshots/${test}.snap" "./snapshots/${test}.tmp.snap"
+  if [ $? -eq 0 ]; then
+    echo "  + pass"
+  else
+    echo "  - fail"
+  fi
+done

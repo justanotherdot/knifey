@@ -1,0 +1,12 @@
+[workspace]
+
+members = [
+    "knifey-core",
+    "knifey-service",
+]
+
+[profile.release]
+lto = "thin"
+
+[profile.bench]
+lto = "thin"
