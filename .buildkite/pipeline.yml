@@ -2,3 +2,7 @@ steps:
   - label: "Tests"
     command:
       - "cargo test"
+
+  - label: "Build"
+    command:
+      - "docker build ."
