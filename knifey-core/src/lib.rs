@@ -1,7 +1,7 @@
 use nom::branch::alt;
-use nom::character::complete::u64;
-use nom::character::complete::{char, multispace1};
-use nom::combinator::map;
+use nom::character::complete::{char, space0, u64};
+use nom::combinator::{map, opt};
+use nom::sequence::tuple;
 use nom::IResult;
 
 #[derive(Debug, PartialEq)]
@@ -15,17 +15,18 @@ pub struct Constant {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Expr {
+pub enum Term {
     Dice(Dice),
     Constant(Constant),
-    BinOp(BinOp),
+    Paren(Expr),
 }
 
 #[derive(Debug, PartialEq)]
-pub enum BinOp {
-    Add { lhs: Box<Expr>, rhs: Box<Expr> },
+pub enum Expr {
+    Add { lhs: Box<Term>, rhs: Box<Term> },
+    Term(Box<Term>),
     // FUTURE:
-    // Subtract { lhs: Expr, rhs: Expr },
+    // Sub { lhs: Term, rhs: Term }
 }
 
 pub fn constant(input: &str) -> IResult<&str, Constant> {
@@ -40,29 +41,24 @@ pub fn dice(input: &str) -> IResult<&str, Dice> {
     Ok((input, Dice { value }))
 }
 
-pub fn bin_op(input: &str) -> IResult<&str, BinOp> {
-    let (input, lhs) = expr(input)?;
-    let (input, _) = multispace1(input)?;
-    let (input, _) = char('+')(input)?;
-    let (input, _) = multispace1(input)?;
-    let (input, rhs) = expr(input)?;
-
-    Ok((
-        input,
-        BinOp::Add {
-            lhs: Box::new(lhs),
-            rhs: Box::new(rhs),
-        },
-    ))
-}
-
 pub fn expr(input: &str) -> IResult<&str, Expr> {
-    let (input, expr) = alt((
-        map(dice, |d: Dice| Expr::Dice(d)),
-        map(constant, |c: Constant| Expr::Constant(c)),
-        //map(bin_op, |op: BinOp| Expr::BinOp(op)),
+    // Term.
+    let (input, lhs) = alt((
+        map(dice, |d: Dice| Term::Dice(d)),
+        map(constant, |c: Constant| Term::Constant(c)),
     ))(input)?;
-    Ok((input, expr))
+    let (input, _) = space0(input)?;
+    let (input, rest) = opt(tuple((char('+'), space0, expr)))(input)?;
+    match rest {
+        Some((_, _, rhs)) => Ok((
+            input,
+            Expr::Add {
+                lhs: Box::new(lhs),
+                rhs: Box::new(Term::Paren(rhs)),
+            },
+        )),
+        None => Ok((input, Expr::Term(Box::new(lhs)))),
+    }
 }
 
 #[cfg(test)]
@@ -71,19 +67,42 @@ mod test {
 
     #[test]
     fn expr_works() {
-        assert_eq!(expr("d20"), Ok(("", Expr::Dice(Dice { value: 20 }))));
-        assert_eq!(expr("20"), Ok(("", Expr::Constant(Constant { value: 20 }))));
-        // stack overflow.
-        //assert_eq!(
-        //    expr("d20 + 20"),
-        //    Ok((
-        //        "",
-        //        Expr::BinOp(BinOp::Add {
-        //            lhs: Expr::Dice(Dice { value: 20 }).into(),
-        //            rhs: Expr::Constant(Constant { value: 20 }).into(),
-        //        })
-        //    ))
-        //);
+        assert_eq!(
+            expr("d20"),
+            Ok(("", Expr::Term(Term::Dice(Dice { value: 20 }).into())))
+        );
+        assert_eq!(
+            expr("20"),
+            Ok((
+                "",
+                Expr::Term(Term::Constant(Constant { value: 20 }).into())
+            ))
+        );
+        assert_eq!(
+            expr("d20 + 20"),
+            Ok((
+                "",
+                Expr::Add {
+                    lhs: Term::Dice(Dice { value: 20 }).into(),
+                    rhs: Term::Paren(Expr::Term(Term::Constant(Constant { value: 20 }).into()))
+                        .into(),
+                }
+            ))
+        );
+        assert_eq!(
+            expr("d20 + 20 + d2"),
+            Ok((
+                "",
+                Expr::Add {
+                    lhs: Term::Dice(Dice { value: 20 }).into(),
+                    rhs: Term::Paren(Expr::Add {
+                        lhs: Term::Constant(Constant { value: 20 }).into(),
+                        rhs: Term::Paren(Expr::Term(Term::Dice(Dice { value: 2 }).into())).into()
+                    })
+                    .into()
+                }
+            ))
+        );
     }
 
     #[test]
@@ -122,28 +141,5 @@ mod test {
         let value: i64 = -12;
         let input = format!("{}", value);
         assert!(constant(&input).is_err());
-    }
-
-    #[test]
-    fn bin_op_works() {
-        #[rustfmt::skip]
-        let cases = [
-            "d20 + d8",
-            "d20   + d8",
-            "d20   +   d8",
-            "d20   +   D8",
-        ];
-        for input in cases {
-            assert_eq!(
-                bin_op(input),
-                Ok((
-                    "",
-                    BinOp::Add {
-                        lhs: Box::new(Expr::Dice(Dice { value: 20 })),
-                        rhs: Box::new(Expr::Dice(Dice { value: 8 })),
-                    }
-                )),
-            );
-        }
     }
 }
