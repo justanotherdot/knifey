@@ -1,6 +1,6 @@
 use nom::branch::alt;
 use nom::character::complete::{char, space0, u64};
-use nom::combinator::{map, opt};
+use nom::combinator::{eof, fail, map, opt};
 use nom::sequence::tuple;
 use nom::IResult;
 
@@ -19,14 +19,15 @@ pub enum Term {
     Dice(Dice),
     Constant(Constant),
     Paren(Expr),
+    // FUTURE:
+    // Negate(Constant),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
     Add { lhs: Box<Term>, rhs: Box<Term> },
+    Sub { lhs: Box<Term>, rhs: Box<Term> },
     Term(Box<Term>),
-    // FUTURE:
-    // Sub { lhs: Term, rhs: Term }
 }
 
 pub fn constant(input: &str) -> IResult<&str, Constant> {
@@ -37,26 +38,36 @@ pub fn constant(input: &str) -> IResult<&str, Constant> {
 pub fn dice(input: &str) -> IResult<&str, Dice> {
     let (input, _) = alt((char('d'), char('D')))(input)?;
     let (input, value) = u64(input)?;
-
     Ok((input, Dice { value }))
 }
 
+pub fn fully<A>(parser: impl FnMut(&str) -> IResult<&str, A>, input: &str) -> IResult<&str, A> {
+    map(tuple((space0, parser, eof)), |(_, expr, _)| expr)(input)
+}
+
 pub fn expr(input: &str) -> IResult<&str, Expr> {
-    // Term.
     let (input, lhs) = alt((
         map(dice, |d: Dice| Term::Dice(d)),
         map(constant, |c: Constant| Term::Constant(c)),
     ))(input)?;
     let (input, _) = space0(input)?;
-    let (input, rest) = opt(tuple((char('+'), space0, expr)))(input)?;
+    let (input, rest) = opt(tuple((alt((char('+'), char('-'))), space0, expr)))(input)?;
     match rest {
-        Some((_, _, rhs)) => Ok((
+        Some(('+', _, rhs)) => Ok((
             input,
             Expr::Add {
                 lhs: Box::new(lhs),
                 rhs: Box::new(Term::Paren(rhs)),
             },
         )),
+        Some(('-', _, rhs)) => Ok((
+            input,
+            Expr::Sub {
+                lhs: Box::new(lhs),
+                rhs: Box::new(Term::Paren(rhs)),
+            },
+        )),
+        Some(_) => fail("unrecognised operator"),
         None => Ok((input, Expr::Term(Box::new(lhs)))),
     }
 }
@@ -103,6 +114,36 @@ mod test {
                 }
             ))
         );
+        assert_eq!(
+            expr("d20 + 20 - d2"),
+            Ok((
+                "",
+                Expr::Add {
+                    lhs: Term::Dice(Dice { value: 20 }).into(),
+                    rhs: Term::Paren(Expr::Sub {
+                        lhs: Term::Constant(Constant { value: 20 }).into(),
+                        rhs: Term::Paren(Expr::Term(Term::Dice(Dice { value: 2 }).into())).into()
+                    })
+                    .into()
+                }
+            ))
+        );
+        assert_eq!(
+            expr("d20 - 20"),
+            Ok((
+                "",
+                Expr::Sub {
+                    lhs: Term::Dice(Dice { value: 20 }).into(),
+                    rhs: Term::Paren(Expr::Term(Term::Constant(Constant { value: 20 }).into()))
+                        .into(),
+                }
+            ))
+        );
+    }
+
+    #[test]
+    fn expr_breaks() {
+        assert!(fully(expr, "d20 / 20").is_err());
     }
 
     #[test]
