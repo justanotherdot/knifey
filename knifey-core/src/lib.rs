@@ -1,5 +1,5 @@
 use nom::branch::alt;
-use nom::character::complete::{char, space0, u64};
+use nom::character::complete::{char, i64, space0, u64};
 use nom::combinator::{eof, fail, map, opt};
 use nom::sequence::tuple;
 use nom::IResult;
@@ -11,7 +11,7 @@ pub struct Dice {
 
 #[derive(Debug, PartialEq)]
 pub struct Constant {
-    pub value: u64,
+    pub value: i64,
 }
 
 #[derive(Debug, PartialEq)]
@@ -19,8 +19,6 @@ pub enum Term {
     Dice(Dice),
     Constant(Constant),
     Paren(Expr),
-    // FUTURE:
-    // Negate(Constant),
 }
 
 #[derive(Debug, PartialEq)]
@@ -31,7 +29,7 @@ pub enum Expr {
 }
 
 pub fn constant(input: &str) -> IResult<&str, Constant> {
-    let (input, value) = u64(input)?;
+    let (input, value) = i64(input)?;
     Ok((input, Constant { value }))
 }
 
@@ -170,17 +168,10 @@ mod test {
 
     #[test]
     fn constant_works() {
-        let cases = [20, u64::MAX];
+        let cases = [-12, 20, i64::MAX];
         for value in cases {
             let input = format!("{}", value);
             assert_eq!(constant(&input), Ok(("", Constant { value })));
         }
-    }
-
-    #[test]
-    fn constant_negative() {
-        let value: i64 = -12;
-        let input = format!("{}", value);
-        assert!(constant(&input).is_err());
     }
 }
