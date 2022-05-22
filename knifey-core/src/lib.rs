@@ -6,9 +6,21 @@ pub mod data {
         pub value: i64,
     }
 
+    impl Dice {
+        pub fn new(value: i64) -> Dice {
+            Dice { value }
+        }
+    }
+
     #[derive(Debug, PartialEq, Clone)]
     pub struct Constant {
         pub value: i64,
+    }
+
+    impl Constant {
+        pub fn new(value: i64) -> Constant {
+            Constant { value }
+        }
     }
 
     #[derive(Debug, PartialEq, Clone)]
@@ -18,11 +30,45 @@ pub mod data {
         Paren(Expr),
     }
 
+    impl Term {
+        pub fn dice(value: i64) -> Term {
+            Term::Dice(Dice::new(value))
+        }
+
+        pub fn constant(value: i64) -> Term {
+            Term::Constant(Constant::new(value))
+        }
+
+        pub fn paren(expr: Expr) -> Term {
+            Term::Paren(expr)
+        }
+    }
+
     #[derive(Debug, PartialEq, Clone)]
     pub enum Expr {
         Add { lhs: Box<Term>, rhs: Box<Term> },
         Sub { lhs: Box<Term>, rhs: Box<Term> },
         Term(Box<Term>),
+    }
+
+    impl Expr {
+        pub fn add(lhs: Term, rhs: Term) -> Expr {
+            Expr::Add {
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            }
+        }
+
+        pub fn sub(lhs: Term, rhs: Term) -> Expr {
+            Expr::Sub {
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            }
+        }
+
+        pub fn term(term: Term) -> Expr {
+            Expr::Term(Box::new(term))
+        }
     }
 }
 
@@ -63,22 +109,10 @@ pub mod parse {
         let (input, _) = space0(input)?;
         let (input, rest) = opt(tuple((alt((char('+'), char('-'))), space0, expr)))(input)?;
         match rest {
-            Some(('+', _, rhs)) => Ok((
-                input,
-                Expr::Add {
-                    lhs: Box::new(lhs),
-                    rhs: Box::new(Term::Paren(rhs)),
-                },
-            )),
-            Some(('-', _, rhs)) => Ok((
-                input,
-                Expr::Sub {
-                    lhs: Box::new(lhs),
-                    rhs: Box::new(Term::Paren(rhs)),
-                },
-            )),
+            Some(('+', _, rhs)) => Ok((input, Expr::add(lhs, Term::paren(rhs)))),
+            Some(('-', _, rhs)) => Ok((input, Expr::sub(lhs, Term::paren(rhs)))),
             Some(_) => fail("unrecognised operator"),
-            None => Ok((input, Expr::Term(Box::new(lhs)))),
+            None => Ok((input, Expr::term(lhs))),
         }
     }
 
@@ -87,69 +121,42 @@ pub mod parse {
         use super::*;
 
         #[test]
-        fn expr_works() {
+        fn parse_expr_works() {
+            assert_eq!(parse_expr("d20"), Ok(Expr::term(Term::dice(20))));
+            assert_eq!(parse_expr("20"), Ok(Expr::term(Term::constant(20))));
             assert_eq!(
-                expr("d20"),
-                Ok(("", Expr::Term(Term::Dice(Dice { value: 20 }).into())))
+                parse_expr("d20 + 20"),
+                Ok(Expr::add(
+                    Term::dice(20),
+                    Term::paren(Expr::term(Term::constant(20)))
+                ),)
             );
             assert_eq!(
-                expr("20"),
-                Ok((
-                    "",
-                    Expr::Term(Term::Constant(Constant { value: 20 }).into())
-                ))
+                parse_expr("d20 + 20 + d2"),
+                Ok(Expr::add(
+                    Term::dice(20),
+                    Term::paren(Expr::add(
+                        Term::constant(20),
+                        Term::paren(Expr::term(Term::dice(2))),
+                    ))
+                ),)
             );
             assert_eq!(
-                expr("d20 + 20"),
-                Ok((
-                    "",
-                    Expr::Add {
-                        lhs: Term::Dice(Dice { value: 20 }).into(),
-                        rhs: Term::Paren(Expr::Term(Term::Constant(Constant { value: 20 }).into()))
-                            .into(),
-                    }
-                ))
+                parse_expr("d20 + 20 - d2"),
+                Ok(Expr::add(
+                    Term::dice(20),
+                    Term::paren(Expr::sub(
+                        Term::constant(20),
+                        Term::paren(Expr::term(Term::dice(2))),
+                    ))
+                ),)
             );
             assert_eq!(
-                expr("d20 + 20 + d2"),
-                Ok((
-                    "",
-                    Expr::Add {
-                        lhs: Term::Dice(Dice { value: 20 }).into(),
-                        rhs: Term::Paren(Expr::Add {
-                            lhs: Term::Constant(Constant { value: 20 }).into(),
-                            rhs: Term::Paren(Expr::Term(Term::Dice(Dice { value: 2 }).into()))
-                                .into()
-                        })
-                        .into()
-                    }
-                ))
-            );
-            assert_eq!(
-                expr("d20 + 20 - d2"),
-                Ok((
-                    "",
-                    Expr::Add {
-                        lhs: Term::Dice(Dice { value: 20 }).into(),
-                        rhs: Term::Paren(Expr::Sub {
-                            lhs: Term::Constant(Constant { value: 20 }).into(),
-                            rhs: Term::Paren(Expr::Term(Term::Dice(Dice { value: 2 }).into()))
-                                .into()
-                        })
-                        .into()
-                    }
-                ))
-            );
-            assert_eq!(
-                expr("d20 - 20"),
-                Ok((
-                    "",
-                    Expr::Sub {
-                        lhs: Term::Dice(Dice { value: 20 }).into(),
-                        rhs: Term::Paren(Expr::Term(Term::Constant(Constant { value: 20 }).into()))
-                            .into(),
-                    }
-                ))
+                parse_expr("d20 - 20"),
+                Ok(Expr::sub(
+                    Term::dice(20),
+                    Term::paren(Expr::term(Term::constant(20)))
+                ),)
             );
         }
 
@@ -167,9 +174,9 @@ pub mod parse {
             ];
             for value in cases {
                 let input = format!("d{}", value);
-                assert_eq!(dice(&input), Ok(("", Dice { value })));
+                assert_eq!(dice(&input), Ok(("", Dice::new(value))));
                 let input = format!("D{}", value);
-                assert_eq!(dice(&input), Ok(("", Dice { value })));
+                assert_eq!(dice(&input), Ok(("", Dice::new(value))));
             }
         }
 
@@ -196,7 +203,7 @@ pub mod parse {
             ];
             for value in cases {
                 let input = format!("{}", value);
-                assert_eq!(constant(&input), Ok(("", Constant { value })));
+                assert_eq!(constant(&input), Ok(("", Constant::new(value))));
             }
         }
     }
@@ -205,7 +212,7 @@ pub mod parse {
 pub mod eval {
     use crate::data::*;
 
-    // A simple tree walk interpreter.
+    /// A simple tree walk interpreter.
     pub fn eval(ast: Expr) -> i64 {
         match ast {
             Expr::Add { lhs, rhs } => eval_term(*lhs) + eval_term(*rhs),
@@ -230,7 +237,7 @@ pub mod eval {
         #[test]
         fn eval_dice_works() {
             let value = 20;
-            let dice = Expr::Term(Box::new(Term::Dice(Dice { value })));
+            let dice = Expr::term(Term::dice(value));
             let roll = eval(dice);
             assert!(roll >= 1 && roll <= 20);
         }
@@ -238,7 +245,7 @@ pub mod eval {
         #[test]
         fn eval_constant_works() {
             let value = 20;
-            let const_term = Expr::Term(Box::new(Term::Constant(Constant { value })));
+            let const_term = Expr::term(Term::constant(value));
             let constant = eval(const_term);
             assert_eq!(constant, value);
         }
@@ -246,11 +253,8 @@ pub mod eval {
         #[test]
         fn eval_add_works() {
             let value = 2;
-            let constant = Box::new(Term::Constant(Constant { value }));
-            let addition = Expr::Add {
-                lhs: constant.clone(),
-                rhs: constant.clone(),
-            };
+            let constant = Term::constant(value);
+            let addition = Expr::add(constant.clone(), constant.clone());
             let result = eval(addition);
             assert_eq!(result, value + value);
         }
@@ -258,11 +262,8 @@ pub mod eval {
         #[test]
         fn eval_sub_works() {
             let value = 2;
-            let constant = Box::new(Term::Constant(Constant { value }));
-            let subtraction = Expr::Sub {
-                lhs: constant.clone(),
-                rhs: constant.clone(),
-            };
+            let constant = Term::constant(value);
+            let subtraction = Expr::sub(constant.clone(), constant.clone());
             let result = eval(subtraction);
             assert_eq!(result, value - value);
         }
@@ -270,15 +271,9 @@ pub mod eval {
         #[test]
         fn eval_nested_works_01() {
             let value = 2;
-            let constant = Box::new(Term::Constant(Constant { value }));
-            let addition = Expr::Add {
-                lhs: constant.clone(),
-                rhs: constant.clone(),
-            };
-            let nested = Expr::Sub {
-                lhs: constant.clone(),
-                rhs: Box::new(Term::Paren(addition)),
-            };
+            let constant = Term::constant(value);
+            let addition = Expr::add(constant.clone(), constant.clone());
+            let nested = Expr::sub(constant.clone(), Term::paren(addition));
             let result = eval(nested);
             assert_eq!(result, value - (value + value));
         }
@@ -286,15 +281,9 @@ pub mod eval {
         #[test]
         fn eval_nested_works_02() {
             let value = 2;
-            let constant = Box::new(Term::Constant(Constant { value }));
-            let addition = Expr::Add {
-                lhs: constant.clone(),
-                rhs: constant.clone(),
-            };
-            let nested = Expr::Sub {
-                lhs: Box::new(Term::Paren(addition)),
-                rhs: constant.clone(),
-            };
+            let constant = Term::constant(value);
+            let addition = Expr::add(constant.clone(), constant.clone());
+            let nested = Expr::sub(Term::paren(addition), constant.clone());
             let result = eval(nested);
             assert_eq!(result, (value + value) - value);
         }
@@ -302,11 +291,8 @@ pub mod eval {
         #[test]
         fn eval_dice_in_bounds() {
             let value = 20;
-            let dice = Box::new(Term::Dice(Dice { value }));
-            let addition = Expr::Add {
-                lhs: dice.clone(),
-                rhs: dice.clone(),
-            };
+            let dice = Term::dice(value);
+            let addition = Expr::add(dice.clone(), dice.clone());
             let result = eval(addition);
             assert!(result >= 1 && result <= (value * 2));
         }
