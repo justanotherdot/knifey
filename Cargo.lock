@@ -454,6 +454,7 @@ name = "knifey-service"
 version = "0.1.0"
 dependencies = [
  "fastrand",
+ "knifey-core",
  "serenity",
  "tokio",
 ]

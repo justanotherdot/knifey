@@ -7,3 +7,4 @@ edition = "2021"
 fastrand = "1.7.0"
 serenity = { version = "0.11.2", default-features = false, features = ["cache", "client", "gateway", "rustls_backend", "model", "framework", "standard_framework"] }
 tokio = { version = "1.18.2", features = ["macros", "rt-multi-thread"] }
+knifey-core = { path = "../knifey-core" }

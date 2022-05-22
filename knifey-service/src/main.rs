@@ -17,6 +17,9 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
+use knifey_core::eval::eval;
+use knifey_core::parse::parse_expr;
+
 struct Handler;
 
 #[async_trait]
@@ -38,7 +41,7 @@ impl TypeMapKey for CommandCounter {
 }
 
 #[group]
-#[commands(about, say, roll)]
+#[commands(about, say, roll, roll_x)]
 struct General;
 
 #[help]
@@ -138,8 +141,42 @@ async fn roll(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     Ok(())
 }
 
+// TODO: -> Result<i64, knifey_core::error::Error>
+pub fn roll_x_go(args: Args) -> i64 {
+    let source = args.raw().collect::<Vec<&str>>().join("");
+    let expr = parse_expr(&source).expect("parse");
+    eval(expr)
+}
+
+#[command]
+async fn roll_x(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let result = roll_x_go(args);
+    msg.channel_id.say(&ctx.http, &result.to_string()).await?;
+    Ok(())
+}
+
 #[command]
 async fn about(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id.say(&ctx.http, "I roll dice.").await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::roll_x_go;
+    use serenity::framework::standard::{Args, Delimiter};
+
+    #[test]
+    fn roll_x_works() {
+        let args = Args::new("d20 + 5", &[Delimiter::Single(' ')]);
+        let roll = roll_x_go(args);
+        assert!(roll >= 5 && roll <= 25);
+    }
+
+    #[test]
+    #[should_panic]
+    fn roll_x_breaks() {
+        let args = Args::new("hi there", &[Delimiter::Single(' ')]);
+        roll_x_go(args);
+    }
 }
