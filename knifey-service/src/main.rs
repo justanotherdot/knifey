@@ -41,7 +41,7 @@ impl TypeMapKey for CommandCounter {
 }
 
 #[group]
-#[commands(about, say, roll, roll_x)]
+#[commands(about, say, roll)]
 struct General;
 
 #[help]
@@ -132,25 +132,16 @@ async fn say(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
-#[command]
-async fn roll(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    // TODO: parse dice as d20, rather than scalar.
-    let max = args.single::<i32>()?;
-    let random = fastrand::i32(1..max);
-    msg.channel_id.say(&ctx.http, &random.to_string()).await?;
-    Ok(())
-}
-
 // TODO: -> Result<i64, knifey_core::error::Error>
-pub fn roll_x_go(args: Args) -> i64 {
+pub fn roll_go(args: Args) -> i64 {
     let source = args.raw().collect::<Vec<&str>>().join("");
     let expr = parse_expr(&source).expect("parse");
     eval(expr)
 }
 
 #[command]
-async fn roll_x(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let result = roll_x_go(args);
+async fn roll(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let result = roll_go(args);
     msg.channel_id.say(&ctx.http, &result.to_string()).await?;
     Ok(())
 }
@@ -163,20 +154,20 @@ async fn about(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[cfg(test)]
 mod test {
-    use super::roll_x_go;
+    use super::roll_go;
     use serenity::framework::standard::{Args, Delimiter};
 
     #[test]
-    fn roll_x_works() {
+    fn roll_works() {
         let args = Args::new("d20 + 5", &[Delimiter::Single(' ')]);
-        let roll = roll_x_go(args);
+        let roll = roll_go(args);
         assert!(roll >= 5 && roll <= 25);
     }
 
     #[test]
     #[should_panic]
-    fn roll_x_breaks() {
+    fn roll_breaks() {
         let args = Args::new("hi there", &[Delimiter::Single(' ')]);
-        roll_x_go(args);
+        roll_go(args);
     }
 }
