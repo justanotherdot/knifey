@@ -69,3 +69,34 @@ impl Expr {
         Expr::Term(Box::new(term))
     }
 }
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Value {
+    /// A single scalar integer.
+    Int64(i64),
+    // FUTURE:
+    // Rolls { rolls: HashMap<String, i64>, result: i64 }
+}
+
+impl Value {
+    pub fn add(self, other: Self) -> Self {
+        use Value::*;
+        match (self, other) {
+            (Int64(x), Int64(y)) => Int64(x + y),
+        }
+    }
+
+    pub fn sub(self, other: Self) -> Self {
+        use Value::*;
+        match (self, other) {
+            (Int64(x), Int64(y)) => Int64(x - y),
+        }
+    }
+
+    pub fn as_i64(&self) -> Option<i64> {
+        use Value::*;
+        match self {
+            Int64(value) => Some(*value),
+        }
+    }
+}
