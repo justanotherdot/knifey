@@ -6,6 +6,15 @@ use nom::IResult;
 
 use crate::data::*;
 
+/// This module encapsulates parsing of the following grammar.
+///
+/// ```plaintext
+/// expr     := term '+' expr | term '-' expr | term;
+/// term     := dice | constant | '(' expr ')' ;
+/// dice     := 'd' number ;
+/// constant := number ;
+/// ```
+
 pub fn constant(input: &str) -> IResult<&str, Constant> {
     let (input, value) = i64(input)?;
     Ok((input, Constant { value }))
@@ -18,19 +27,18 @@ pub fn dice(input: &str) -> IResult<&str, Dice> {
     Ok((input, Dice { value }))
 }
 
-pub fn fully<A>(parser: impl FnMut(&str) -> IResult<&str, A>, input: &str) -> IResult<&str, A> {
-    map(tuple((space0, parser, eof)), |(_, expr, _)| expr)(input)
-}
-
-pub fn parse_expr(input: &str) -> Result<Expr, nom::Err<nom::error::Error<&str>>> {
-    fully(expr, input).map(|(_, expr)| expr)
+pub fn term(input: &str) -> IResult<&str, Term> {
+    alt((
+        map(dice, |d: Dice| Term::Dice(d)),
+        map(constant, |c: Constant| Term::Constant(c)),
+        map(tuple((char('('), expr, char(')'))), |(_, e, _)| {
+            Term::Paren(e)
+        }),
+    ))(input)
 }
 
 pub fn expr(input: &str) -> IResult<&str, Expr> {
-    let (input, lhs) = alt((
-        map(dice, |d: Dice| Term::Dice(d)),
-        map(constant, |c: Constant| Term::Constant(c)),
-    ))(input)?;
+    let (input, lhs) = term(input)?;
     let (input, _) = space0(input)?;
     let (input, rest) = opt(tuple((alt((char('+'), char('-'))), space0, expr)))(input)?;
     match rest {
@@ -39,6 +47,14 @@ pub fn expr(input: &str) -> IResult<&str, Expr> {
         Some(_) => fail("unrecognised operator"),
         None => Ok((input, Expr::term(lhs))),
     }
+}
+
+pub fn fully<A>(parser: impl FnMut(&str) -> IResult<&str, A>, input: &str) -> IResult<&str, A> {
+    map(tuple((space0, parser, eof)), |(_, expr, _)| expr)(input)
+}
+
+pub fn parse_expr(input: &str) -> Result<Expr, nom::Err<nom::error::Error<&str>>> {
+    fully(expr, input).map(|(_, expr)| expr)
 }
 
 #[cfg(test)]
@@ -54,7 +70,7 @@ mod test {
             Ok(Expr::add(
                 Term::dice(20),
                 Term::paren(Expr::term(Term::constant(20)))
-            ),)
+            ))
         );
         assert_eq!(
             parse_expr("d20 + 20 + d2"),
@@ -82,6 +98,54 @@ mod test {
                 Term::dice(20),
                 Term::paren(Expr::term(Term::constant(20)))
             ),)
+        );
+        assert_eq!(
+            parse_expr("(d20)"),
+            Ok(Expr::term(Term::paren(Expr::term(Term::dice(20)))))
+        );
+        assert_eq!(
+            parse_expr("(20)"),
+            Ok(Expr::term(Term::paren(Expr::term(Term::constant(20)))))
+        );
+        assert_eq!(
+            parse_expr("(d20 + 20)"),
+            Ok(Expr::term(Term::paren(Expr::add(
+                Term::dice(20),
+                Term::paren(Expr::term(Term::constant(20)))
+            ))))
+        );
+        assert_eq!(
+            parse_expr("(d20 + 20) + 7"),
+            Ok(Expr::add(
+                Term::paren(Expr::add(
+                    Term::dice(20),
+                    Term::paren(Expr::term(Term::constant(20)))
+                )),
+                Term::paren(Expr::term(Term::constant(7),))
+            ))
+        );
+        assert_eq!(
+            parse_expr("((d20 - 10) + 20) + 7"),
+            Ok(Expr::add(
+                Term::paren(Expr::add(
+                    Term::paren(Expr::sub(
+                        Term::dice(20),
+                        Term::paren(Expr::term(Term::constant(10)))
+                    )),
+                    Term::paren(Expr::term(Term::constant(20)))
+                )),
+                Term::paren(Expr::term(Term::constant(7),))
+            ))
+        );
+        assert_eq!(
+            parse_expr("d20 + (20 + 7)"),
+            Ok(Expr::add(
+                Term::dice(20),
+                Term::paren(Expr::term(Term::paren(Expr::add(
+                    Term::constant(20),
+                    Term::paren(Expr::term(Term::constant(7)))
+                )))),
+            ))
         );
     }
 
