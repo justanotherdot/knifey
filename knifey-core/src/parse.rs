@@ -1,3 +1,12 @@
+//! This module encapsulates parsing of the following grammar.
+//!
+//! ```plaintext
+//! expr     := term '+' expr | term '-' expr | term;
+//! term     := dice | constant | '(' expr ')' ;
+//! dice     := 'd' number ;
+//! constant := number ;
+//! ```
+
 use nom::branch::alt;
 use nom::character::complete::{char, i64, space0};
 use nom::combinator::{eof, map, verify};
@@ -5,15 +14,6 @@ use nom::sequence::tuple;
 use nom::IResult;
 
 use crate::data::*;
-
-/// This module encapsulates parsing of the following grammar.
-///
-/// ```plaintext
-/// expr     := term '+' expr | term '-' expr | term;
-/// term     := dice | constant | '(' expr ')' ;
-/// dice     := 'd' number ;
-/// constant := number ;
-/// ```
 
 pub fn constant(input: &str) -> IResult<&str, Constant> {
     let (input, value) = i64(input)?;
