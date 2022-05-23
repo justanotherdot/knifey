@@ -136,7 +136,7 @@ async fn say(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 pub fn roll_go(args: Args) -> i64 {
     let source = args.raw().collect::<Vec<&str>>().join("");
     let expr = parse_expr(&source).expect("parse");
-    eval(expr)
+    eval(expr).as_i64().expect("cast")
 }
 
 #[command]

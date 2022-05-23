@@ -26,6 +26,10 @@ helpful for debugging state.
 
 Support for parenthesis.
 
+### Multiple rolls with integer prefix to die
+
+e.g. `2d8`
+
 ## Testing
 
 Fuzzing against the grammar would be good.
