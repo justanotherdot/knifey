@@ -1,6 +1,6 @@
 use nom::branch::alt;
 use nom::character::complete::{char, i64, space0};
-use nom::combinator::{eof, fail, map, opt, verify};
+use nom::combinator::{eof, map, verify};
 use nom::sequence::tuple;
 use nom::IResult;
 
@@ -38,15 +38,17 @@ pub fn term(input: &str) -> IResult<&str, Term> {
 }
 
 pub fn expr(input: &str) -> IResult<&str, Expr> {
-    let (input, lhs) = term(input)?;
-    let (input, _) = space0(input)?;
-    let (input, rest) = opt(tuple((alt((char('+'), char('-'))), space0, expr)))(input)?;
-    match rest {
-        Some(('+', _, rhs)) => Ok((input, Expr::add(lhs, Term::paren(rhs)))),
-        Some(('-', _, rhs)) => Ok((input, Expr::sub(lhs, Term::paren(rhs)))),
-        Some(_) => fail("unrecognised operator"),
-        None => Ok((input, Expr::term(lhs))),
-    }
+    alt((
+        map(
+            tuple((term, space0, char('+'), space0, expr)),
+            |(lhs, _, _, _, rhs)| Expr::add(lhs, Term::paren(rhs)),
+        ),
+        map(
+            tuple((term, space0, char('-'), space0, expr)),
+            |(lhs, _, _, _, rhs)| Expr::sub(lhs, Term::paren(rhs)),
+        ),
+        map(term, |t| Expr::term(t)),
+    ))(input)
 }
 
 pub fn fully<A>(parser: impl FnMut(&str) -> IResult<&str, A>, input: &str) -> IResult<&str, A> {
