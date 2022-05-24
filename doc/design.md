@@ -30,6 +30,10 @@ Support for parenthesis.
 
 e.g. `2d8`
 
+### Restrict die ranges.
+
+This would be the common ranges, including 100. Hence: 4, 6, 8, 10, 12, 20, 100.
+
 ## Testing
 
 Fuzzing against the grammar would be good.
