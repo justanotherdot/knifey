@@ -45,20 +45,20 @@ impl Term {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
-    Add { lhs: Box<Term>, rhs: Box<Term> },
-    Sub { lhs: Box<Term>, rhs: Box<Term> },
+    Add { lhs: Box<Term>, rhs: Box<Expr> },
+    Sub { lhs: Box<Term>, rhs: Box<Expr> },
     Term(Box<Term>),
 }
 
 impl Expr {
-    pub fn add(lhs: Term, rhs: Term) -> Expr {
+    pub fn add(lhs: Term, rhs: Expr) -> Expr {
         Expr::Add {
             lhs: Box::new(lhs),
             rhs: Box::new(rhs),
         }
     }
 
-    pub fn sub(lhs: Term, rhs: Term) -> Expr {
+    pub fn sub(lhs: Term, rhs: Expr) -> Expr {
         Expr::Sub {
             lhs: Box::new(lhs),
             rhs: Box::new(rhs),

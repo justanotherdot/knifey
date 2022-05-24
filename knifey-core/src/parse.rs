@@ -1,10 +1,11 @@
 //! This module encapsulates parsing of the following grammar.
 //!
 //! ```plaintext
-//! expr     := term '+' expr | term '-' expr | term;
+//! expr     := term '+' expr | term '-' expr | term ;
 //! term     := dice | constant | '(' expr ')' ;
 //! dice     := 'd' number ;
 //! constant := number ;
+//! number   := '0-9'* ;
 //! ```
 
 use nom::branch::alt;
@@ -23,7 +24,7 @@ pub fn constant(input: &str) -> IResult<&str, Constant> {
 /// Dice rolls are any positive integer prefaced with the letter `d`.
 pub fn dice(input: &str) -> IResult<&str, Dice> {
     let (input, _) = alt((char('d'), char('D')))(input)?;
-    let (input, value) = verify(i64, |x: &i64| *x > 0)(input)?;
+    let (input, value) = verify(i64, |x: &i64| *x > 1)(input)?;
     Ok((input, Dice { value }))
 }
 
@@ -41,11 +42,11 @@ pub fn expr(input: &str) -> IResult<&str, Expr> {
     alt((
         map(
             tuple((term, space0, char('+'), space0, expr)),
-            |(lhs, _, _, _, rhs)| Expr::add(lhs, Term::paren(rhs)),
+            |(lhs, _, _, _, rhs)| Expr::add(lhs, rhs),
         ),
         map(
             tuple((term, space0, char('-'), space0, expr)),
-            |(lhs, _, _, _, rhs)| Expr::sub(lhs, Term::paren(rhs)),
+            |(lhs, _, _, _, rhs)| Expr::sub(lhs, rhs),
         ),
         map(term, |t| Expr::term(t)),
     ))(input)
@@ -68,38 +69,30 @@ mod test {
         assert_eq!(parse_expr("d20"), Ok(Expr::term(Term::dice(20))));
         assert_eq!(parse_expr("20"), Ok(Expr::term(Term::constant(20))));
         assert_eq!(
+            parse_expr("(20)"),
+            Ok(Expr::term(Term::paren(Expr::term(Term::constant(20)))))
+        );
+        assert_eq!(
             parse_expr("d20 + 20"),
-            Ok(Expr::add(
-                Term::dice(20),
-                Term::paren(Expr::term(Term::constant(20)))
-            ))
+            Ok(Expr::add(Term::dice(20), Expr::term(Term::constant(20))))
         );
         assert_eq!(
             parse_expr("d20 + 20 + d2"),
             Ok(Expr::add(
                 Term::dice(20),
-                Term::paren(Expr::add(
-                    Term::constant(20),
-                    Term::paren(Expr::term(Term::dice(2))),
-                ))
+                Expr::add(Term::constant(20), Expr::term(Term::dice(2)),)
             ),)
         );
         assert_eq!(
             parse_expr("d20 + 20 - d2"),
             Ok(Expr::add(
                 Term::dice(20),
-                Term::paren(Expr::sub(
-                    Term::constant(20),
-                    Term::paren(Expr::term(Term::dice(2))),
-                ))
+                Expr::sub(Term::constant(20), Expr::term(Term::dice(2)),)
             ),)
         );
         assert_eq!(
             parse_expr("d20 - 20"),
-            Ok(Expr::sub(
-                Term::dice(20),
-                Term::paren(Expr::term(Term::constant(20)))
-            ),)
+            Ok(Expr::sub(Term::dice(20), Expr::term(Term::constant(20))))
         );
         assert_eq!(
             parse_expr("(d20)"),
@@ -113,47 +106,87 @@ mod test {
             parse_expr("(d20 + 20)"),
             Ok(Expr::term(Term::paren(Expr::add(
                 Term::dice(20),
-                Term::paren(Expr::term(Term::constant(20)))
+                Expr::term(Term::constant(20))
             ))))
         );
         assert_eq!(
             parse_expr("(d20 + 20) + 7"),
             Ok(Expr::add(
-                Term::paren(Expr::add(
-                    Term::dice(20),
-                    Term::paren(Expr::term(Term::constant(20)))
-                )),
-                Term::paren(Expr::term(Term::constant(7),))
+                Term::paren(Expr::add(Term::dice(20), Expr::term(Term::constant(20)))),
+                Expr::term(Term::constant(7),)
             ))
         );
         assert_eq!(
             parse_expr("((d20 - 10) + 20) + 7"),
             Ok(Expr::add(
                 Term::paren(Expr::add(
-                    Term::paren(Expr::sub(
-                        Term::dice(20),
-                        Term::paren(Expr::term(Term::constant(10)))
-                    )),
-                    Term::paren(Expr::term(Term::constant(20)))
+                    Term::paren(Expr::sub(Term::dice(20), Expr::term(Term::constant(10)))),
+                    Expr::term(Term::constant(20))
                 )),
-                Term::paren(Expr::term(Term::constant(7),))
+                Expr::term(Term::constant(7),)
+            ))
+        );
+        assert_eq!(
+            parse_expr("d20 - (10 + (20 + 7))"),
+            Ok(Expr::sub(
+                Term::dice(20),
+                Expr::term(Term::paren(Expr::add(
+                    Term::constant(10),
+                    Expr::term(Term::paren(Expr::add(
+                        Term::constant(20),
+                        Expr::term(Term::constant(7)),
+                    )),)
+                ))),
             ))
         );
         assert_eq!(
             parse_expr("d20 + (20 + 7)"),
             Ok(Expr::add(
                 Term::dice(20),
-                Term::paren(Expr::term(Term::paren(Expr::add(
+                Expr::term(Term::paren(Expr::add(
                     Term::constant(20),
-                    Term::paren(Expr::term(Term::constant(7)))
-                )))),
+                    Expr::term(Term::constant(7))
+                ))),
             ))
+        );
+        assert_eq!(
+            parse_expr("(d20 + 3) + (20 + 7)"),
+            Ok(Expr::add(
+                Term::paren(Expr::add(Term::dice(20), Expr::term(Term::constant(3)),)),
+                Expr::term(Term::paren(Expr::add(
+                    Term::constant(20),
+                    Expr::term(Term::constant(7))
+                ))),
+            ))
+        );
+        assert_eq!(
+            parse_expr("(d20 + (20) + 11)"),
+            Ok(Expr::term(Term::paren(Expr::add(
+                Term::dice(20),
+                Expr::add(
+                    Term::paren(Expr::term(Term::constant(20),)),
+                    Expr::term(Term::constant(11))
+                )
+            ))))
         );
     }
 
     #[test]
     fn parse_expr_breaks() {
         assert!(parse_expr("d20 / 20").is_err());
+        assert!(parse_expr("+").is_err());
+        assert!(parse_expr("-").is_err());
+        assert!(parse_expr("(1 + 2").is_err());
+        assert!(parse_expr("1 + 2)").is_err());
+        assert!(parse_expr("1 +").is_err());
+        assert!(parse_expr("+ 2").is_err());
+        assert!(parse_expr("2d").is_err());
+        assert!(parse_expr("d").is_err());
+        assert!(parse_expr("0d2").is_err());
+        assert!(parse_expr("1d1").is_err());
+        assert!(parse_expr("d1").is_err());
+        assert!(parse_expr("--12").is_err());
+        assert!(parse_expr("d-12").is_err());
     }
 
     #[test]
