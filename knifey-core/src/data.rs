@@ -44,29 +44,50 @@ impl Term {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Expr {
-    Add { lhs: Box<Term>, rhs: Box<Expr> },
-    Sub { lhs: Box<Term>, rhs: Box<Expr> },
+pub enum Factor {
+    Mul { lhs: Box<Term>, rhs: Box<Factor> },
     Term(Box<Term>),
+    // FUTURE:
+    // Div { lhs: Box<Term>, rhs: Box<Expr> },
+}
+
+impl Factor {
+    pub fn mul(lhs: Term, rhs: Factor) -> Factor {
+        Factor::Mul {
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        }
+    }
+
+    pub fn term(term: Term) -> Factor {
+        Factor::Term(Box::new(term))
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Expr {
+    Add { lhs: Box<Factor>, rhs: Box<Expr> },
+    Sub { lhs: Box<Factor>, rhs: Box<Expr> },
+    Factor(Box<Factor>),
 }
 
 impl Expr {
-    pub fn add(lhs: Term, rhs: Expr) -> Expr {
+    pub fn add(lhs: Factor, rhs: Expr) -> Expr {
         Expr::Add {
             lhs: Box::new(lhs),
             rhs: Box::new(rhs),
         }
     }
 
-    pub fn sub(lhs: Term, rhs: Expr) -> Expr {
+    pub fn sub(lhs: Factor, rhs: Expr) -> Expr {
         Expr::Sub {
             lhs: Box::new(lhs),
             rhs: Box::new(rhs),
         }
     }
 
-    pub fn term(term: Term) -> Expr {
-        Expr::Term(Box::new(term))
+    pub fn factor(factor: Factor) -> Expr {
+        Expr::Factor(Box::new(factor))
     }
 }
 
@@ -90,6 +111,13 @@ impl Value {
         use Value::*;
         match (self, other) {
             (Int64(x), Int64(y)) => Int64(x - y),
+        }
+    }
+
+    pub fn mul(self, other: Self) -> Self {
+        use Value::*;
+        match (self, other) {
+            (Int64(x), Int64(y)) => Int64(x * y),
         }
     }
 
