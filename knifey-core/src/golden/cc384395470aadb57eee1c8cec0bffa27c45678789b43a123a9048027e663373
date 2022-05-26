@@ -1,0 +1,20 @@
+d20 + 20
+---
+Add {
+    lhs: Term(
+        Dice(
+            Dice {
+                value: 20,
+            },
+        ),
+    ),
+    rhs: Factor(
+        Term(
+            Constant(
+                Constant {
+                    value: 20,
+                },
+            ),
+        ),
+    ),
+}

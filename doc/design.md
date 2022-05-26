@@ -42,3 +42,7 @@ Fuzzing against the grammar would be good.
 
 The combinators for building the AST could be drastically better to improve
 ergonomics of expressing types without relying heavily on the parse logic.
+
+### Snapshots
+
+Make golden files write/read from vec of bytes.

@@ -1,0 +1,41 @@
+(d20 + (20) + 11)
+---
+Factor(
+    Term(
+        Paren(
+            Add {
+                lhs: Term(
+                    Dice(
+                        Dice {
+                            value: 20,
+                        },
+                    ),
+                ),
+                rhs: Add {
+                    lhs: Term(
+                        Paren(
+                            Factor(
+                                Term(
+                                    Constant(
+                                        Constant {
+                                            value: 20,
+                                        },
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                    rhs: Factor(
+                        Term(
+                            Constant(
+                                Constant {
+                                    value: 11,
+                                },
+                            ),
+                        ),
+                    ),
+                },
+            },
+        ),
+    ),
+)

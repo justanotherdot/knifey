@@ -78,145 +78,26 @@ pub fn parse_expr(input: &str) -> Result<Expr, nom::Err<nom::error::Error<&str>>
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::test::golden::check_golden_expr;
 
     #[test]
     fn parse_expr_works() {
-        assert_eq!(
-            parse_expr("d20"),
-            Ok(Expr::factor(Factor::term(Term::dice(20))))
-        );
-        assert_eq!(
-            parse_expr("20"),
-            Ok(Expr::factor(Factor::term(Term::constant(20))))
-        );
-        assert_eq!(
-            parse_expr("(20)"),
-            Ok(Expr::factor(Factor::term(Term::paren(Expr::factor(
-                Factor::term(Term::constant(20))
-            )))))
-        );
-        assert_eq!(
-            parse_expr("d20 + 20"),
-            Ok(Expr::add(
-                Factor::term(Term::dice(20)),
-                Expr::factor(Factor::term(Term::constant(20)))
-            ))
-        );
-        assert_eq!(
-            parse_expr("d20 + 20 + d2"),
-            Ok(Expr::add(
-                Factor::term(Term::dice(20)),
-                Expr::add(
-                    Factor::term(Term::constant(20)),
-                    Expr::factor(Factor::term(Term::dice(2))),
-                )
-            ),)
-        );
-        assert_eq!(
-            parse_expr("d20 + 20 - d2"),
-            Ok(Expr::add(
-                Factor::term(Term::dice(20)),
-                Expr::sub(
-                    Factor::term(Term::constant(20)),
-                    Expr::factor(Factor::term(Term::dice(2))),
-                )
-            ),)
-        );
-        assert_eq!(
-            parse_expr("d20 - 20"),
-            Ok(Expr::sub(
-                Factor::term(Term::dice(20)),
-                Expr::factor(Factor::term(Term::constant(20)))
-            ))
-        );
-        assert_eq!(
-            parse_expr("(d20)"),
-            Ok(Expr::factor(Factor::term(Term::paren(Expr::factor(
-                Factor::term(Term::dice(20))
-            )))))
-        );
-        assert_eq!(
-            parse_expr("(20)"),
-            Ok(Expr::factor(Factor::term(Term::paren(Expr::factor(
-                Factor::term(Term::constant(20))
-            )))))
-        );
-        assert_eq!(
-            parse_expr("(d20 + 20)"),
-            Ok(Expr::factor(Factor::term(Term::paren(Expr::add(
-                Factor::term(Term::dice(20)),
-                Expr::factor(Factor::term(Term::constant(20)))
-            )))))
-        );
-        assert_eq!(
-            parse_expr("(d20 + 20) + 7"),
-            Ok(Expr::add(
-                Factor::term(Term::paren(Expr::add(
-                    Factor::term(Term::dice(20)),
-                    Expr::factor(Factor::term(Term::constant(20)))
-                ))),
-                Expr::factor(Factor::term(Term::constant(7)))
-            ))
-        );
-        assert_eq!(
-            parse_expr("((d20 - 10) + 20) + 7"),
-            Ok(Expr::add(
-                Factor::term(Term::paren(Expr::add(
-                    Factor::term(Term::paren(Expr::sub(
-                        Factor::term(Term::dice(20)),
-                        Expr::factor(Factor::term(Term::constant(10)))
-                    ))),
-                    Expr::factor(Factor::term(Term::constant(20)))
-                ))),
-                Expr::factor(Factor::term(Term::constant(7)))
-            ))
-        );
-        assert_eq!(
-            parse_expr("d20 - (10 + (20 + 7))"),
-            Ok(Expr::sub(
-                Factor::term(Term::dice(20)),
-                Expr::factor(Factor::term(Term::paren(Expr::add(
-                    Factor::term(Term::constant(10)),
-                    Expr::factor(Factor::term(Term::paren(Expr::add(
-                        Factor::term(Term::constant(20)),
-                        Expr::factor(Factor::term(Term::constant(7))),
-                    )))),
-                )))),
-            ))
-        );
-        assert_eq!(
-            parse_expr("d20 + (20 + 7)"),
-            Ok(Expr::add(
-                Factor::term(Term::dice(20)),
-                Expr::factor(Factor::term(Term::paren(Expr::add(
-                    Factor::term(Term::constant(20)),
-                    Expr::factor(Factor::term(Term::constant(7)))
-                )))),
-            ))
-        );
-        assert_eq!(
-            parse_expr("(d20 + 3) + (20 + 7)"),
-            Ok(Expr::add(
-                Factor::term(Term::paren(Expr::add(
-                    Factor::term(Term::dice(20)),
-                    Expr::factor(Factor::term(Term::constant(3)))
-                ))),
-                Expr::factor(Factor::term(Term::paren(Expr::add(
-                    Factor::term(Term::constant(20)),
-                    Expr::factor(Factor::term(Term::constant(7)))
-                )))),
-            ))
-        );
-        assert_eq!(
-            parse_expr("(d20 + (20) + 11)"),
-            Ok(Expr::factor(Factor::term(Term::paren(Expr::add(
-                Factor::term(Term::dice(20)),
-                Expr::add(
-                    Factor::term(Term::paren(Expr::factor(Factor::term(Term::constant(20))))),
-                    Expr::factor(Factor::term(Term::constant(11)))
-                )
-            )))))
-        );
+        check_golden_expr("d20");
+        check_golden_expr("20");
+        check_golden_expr("(20)");
+        check_golden_expr("d20 + 20");
+        check_golden_expr("d20 + 20 + d2");
+        check_golden_expr("d20 + 20 - d2");
+        check_golden_expr("d20 - 20");
+        check_golden_expr("(d20)");
+        check_golden_expr("(20)");
+        check_golden_expr("(d20 + 20)");
+        check_golden_expr("(d20 + 20) + 7");
+        check_golden_expr("((d20 - 10) + 20) + 7");
+        check_golden_expr("d20 - (10 + (20 + 7))");
+        check_golden_expr("d20 + (20 + 7)");
+        check_golden_expr("(d20 + 3) + (20 + 7)");
+        check_golden_expr("(d20 + (20) + 11)");
     }
 
     #[test]

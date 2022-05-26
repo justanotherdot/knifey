@@ -1,0 +1,50 @@
+d20 - (10 + (20 + 7))
+---
+Sub {
+    lhs: Term(
+        Dice(
+            Dice {
+                value: 20,
+            },
+        ),
+    ),
+    rhs: Factor(
+        Term(
+            Paren(
+                Add {
+                    lhs: Term(
+                        Constant(
+                            Constant {
+                                value: 10,
+                            },
+                        ),
+                    ),
+                    rhs: Factor(
+                        Term(
+                            Paren(
+                                Add {
+                                    lhs: Term(
+                                        Constant(
+                                            Constant {
+                                                value: 20,
+                                            },
+                                        ),
+                                    ),
+                                    rhs: Factor(
+                                        Term(
+                                            Constant(
+                                                Constant {
+                                                    value: 7,
+                                                },
+                                            ),
+                                        ),
+                                    ),
+                                },
+                            ),
+                        ),
+                    ),
+                },
+            ),
+        ),
+    ),
+}
