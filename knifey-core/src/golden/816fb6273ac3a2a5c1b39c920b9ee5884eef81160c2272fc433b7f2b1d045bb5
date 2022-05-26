@@ -1,0 +1,11 @@
+d20
+---
+Factor(
+    Term(
+        Dice(
+            Dice {
+                value: 20,
+            },
+        ),
+    ),
+)

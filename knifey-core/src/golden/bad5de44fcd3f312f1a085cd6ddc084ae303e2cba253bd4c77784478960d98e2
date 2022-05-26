@@ -1,0 +1,17 @@
+(d20)
+---
+Factor(
+    Term(
+        Paren(
+            Factor(
+                Term(
+                    Dice(
+                        Dice {
+                            value: 20,
+                        },
+                    ),
+                ),
+            ),
+        ),
+    ),
+)

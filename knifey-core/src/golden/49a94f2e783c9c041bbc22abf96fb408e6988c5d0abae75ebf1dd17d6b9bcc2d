@@ -1,0 +1,11 @@
+20
+---
+Factor(
+    Term(
+        Constant(
+            Constant {
+                value: 20,
+            },
+        ),
+    ),
+)

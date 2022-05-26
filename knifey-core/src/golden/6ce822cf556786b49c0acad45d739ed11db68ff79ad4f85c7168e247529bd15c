@@ -1,0 +1,17 @@
+(20)
+---
+Factor(
+    Term(
+        Paren(
+            Factor(
+                Term(
+                    Constant(
+                        Constant {
+                            value: 20,
+                        },
+                    ),
+                ),
+            ),
+        ),
+    ),
+)
