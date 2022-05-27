@@ -45,10 +45,6 @@ pub fn factor(input: &str) -> IResult<&str, Factor> {
             tuple((term, space0, char('*'), space0, factor)),
             |(lhs, _, _, _, rhs)| Factor::mul(lhs, rhs),
         ),
-        //map(
-        //    tuple((term, space0, char('/'), space0, expr)),
-        //    |(lhs, _, _, _, rhs)| Expr::sub(lhs, rhs),
-        //),
         map(term, |t| Factor::term(t)),
     ))(input)
 }
@@ -89,6 +85,9 @@ mod test {
         check_golden_expr("d20 + 20 + d2");
         check_golden_expr("d20 + 20 - d2");
         check_golden_expr("d20 - 20");
+        check_golden_expr("d20 * 20");
+        check_golden_expr("d20 * 20 + 100");
+        check_golden_expr("d20 * 20 + 100 - 88");
         check_golden_expr("(d20)");
         check_golden_expr("(20)");
         check_golden_expr("(d20 + 20)");

@@ -1,0 +1,36 @@
+d20 * 20 + 100 - 88
+---
+Add {
+    lhs: Mul {
+        lhs: Dice(
+            Dice {
+                value: 20,
+            },
+        ),
+        rhs: Term(
+            Constant(
+                Constant {
+                    value: 20,
+                },
+            ),
+        ),
+    },
+    rhs: Sub {
+        lhs: Term(
+            Constant(
+                Constant {
+                    value: 100,
+                },
+            ),
+        ),
+        rhs: Factor(
+            Term(
+                Constant(
+                    Constant {
+                        value: 88,
+                    },
+                ),
+            ),
+        ),
+    },
+}

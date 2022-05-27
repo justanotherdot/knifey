@@ -1,0 +1,18 @@
+d20 * 20
+---
+Factor(
+    Mul {
+        lhs: Dice(
+            Dice {
+                value: 20,
+            },
+        ),
+        rhs: Term(
+            Constant(
+                Constant {
+                    value: 20,
+                },
+            ),
+        ),
+    },
+)
