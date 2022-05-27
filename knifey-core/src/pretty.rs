@@ -39,12 +39,11 @@ pub fn pretty_term(term: Term) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
-    //use crate::parse;
+    use crate::parse;
 
-    //fn check_roundtrip_expr(input: &str) {
-    //    let expr = parse::parse_expr(input).expect("parse);
-    //    assert_eq!(pretty_term(expr), "d4");
-    //}
+    fn check_roundtrip_expr(input: &str) {
+        assert_eq!(pretty_expr(parse::parse_expr(input).expect("parse")), input);
+    }
 
     #[test]
     fn pretty_term_works_constant() {
@@ -113,5 +112,27 @@ mod test {
         ));
         assert_eq!(&*pretty_expr(mul.clone()), "3 * 2");
         assert_eq!(&*pretty_expr(mul.clone()), "3 * 2");
+    }
+
+    #[test]
+    fn roundtrip() {
+        check_roundtrip_expr("1");
+        check_roundtrip_expr("d20");
+        check_roundtrip_expr("666 + 666");
+        check_roundtrip_expr("666 - 666");
+        check_roundtrip_expr("666 * 666");
+        check_roundtrip_expr("(1)");
+        check_roundtrip_expr("(d20)");
+        check_roundtrip_expr("(666 + 666)");
+        check_roundtrip_expr("(666 - 666)");
+        check_roundtrip_expr("(666 * 666)");
+        check_roundtrip_expr("42 + (666 * 666)");
+        check_roundtrip_expr("(666 * 666) + 42");
+        check_roundtrip_expr("(666 * 666) + 42");
+        check_roundtrip_expr("(666 * 666) + 42");
+        check_roundtrip_expr("666 * 666 * 666 * 666");
+        check_roundtrip_expr("666 * 666 + 666 - 666");
+        check_roundtrip_expr("666 * ((666) + 666) - 666");
+        check_roundtrip_expr("((((1))))");
     }
 }
