@@ -21,7 +21,7 @@ pub fn golden_name(input: &str) -> String {
 
 pub fn path_to_golden_file(input: &str) -> PathBuf {
     let name = golden_name(input);
-    PathBuf::from("src/golden").join(name)
+    PathBuf::from("src/golden/expr").join(name)
 }
 
 pub fn read_golden(input: &str) -> Result<String, std::io::Error> {
