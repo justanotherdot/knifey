@@ -74,7 +74,10 @@ pub fn parse_expr(input: &str) -> Result<Expr, nom::Err<nom::error::Error<&str>>
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::data;
+    use crate::pretty;
     use crate::test::golden::check_golden_expr;
+    use quickcheck::quickcheck;
 
     #[test]
     fn parse_expr_works() {
@@ -119,11 +122,7 @@ mod test {
 
     #[test]
     fn dice_works() {
-        #[rustfmt::skip]
-            let cases = [
-                20,
-                i64::MAX,
-            ];
+        let cases = [20, i64::MAX];
         for value in cases {
             let input = format!("d{}", value);
             assert_eq!(dice(&input), Ok(("", Dice::new(value))));
@@ -135,11 +134,7 @@ mod test {
     #[test]
     fn dice_must_be_postive() {
         let as_string = |x: i64| format!("d{}", x);
-        #[rustfmt::skip]
-            let cases = [
-                as_string(-12),
-                as_string(0),
-            ];
+        let cases = [as_string(-12), as_string(0)];
         for case in cases {
             assert!(dice(&case).is_err());
         }
@@ -147,15 +142,32 @@ mod test {
 
     #[test]
     fn constant_works() {
-        #[rustfmt::skip]
-            let cases = [
-                -12,
-                20,
-                i64::MAX
-            ];
+        let cases = [-12, 20, i64::MAX];
         for value in cases {
             let input = format!("{}", value);
             assert_eq!(constant(&input), Ok(("", Constant::new(value))));
+        }
+    }
+
+    //#[test]
+    //fn sample() {
+    //    use quickcheck::Arbitrary;
+    //    let mut gen = quickcheck::Gen::new(10);
+    //    for _ in 0..100 {
+    //        let expr = data::Expr::arbitrary(&mut gen);
+    //        println!("{}", pretty::pretty_expr(expr));
+    //    }
+    //    assert!(false);
+    //}
+
+    quickcheck! {
+        fn law_parse_roundtrip(ast0: data::Expr) -> bool {
+            let source = pretty::pretty_expr(ast0.clone());
+            dbg!(&source);
+            match parse_expr(&*source) {
+                Ok(ast1) => ast0 == ast1,
+                Err(_) => false,
+            }
         }
     }
 }
